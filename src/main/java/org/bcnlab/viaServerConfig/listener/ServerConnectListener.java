@@ -40,11 +40,20 @@ public class ServerConnectListener {
         try {
             ViaAPI<?> api = Via.getAPI();
             int playerVersion = api.getPlayerVersion(player.getUniqueId());
-
+            
             if (!requirement.canConnect(playerVersion)) {
                 event.setResult(ServerPreConnectEvent.ServerResult.denied());
                 
-                String rawMessage = plugin.getDenyMessage().replace("{needed_version}", getVersionName(requirement.getTargetProtocolVersion()));
+                String versionName;
+                if (requirement.getMinimumProtocolVersion() > 0 && playerVersion < requirement.getMinimumProtocolVersion()) {
+                    // Player is below minimum version
+                    versionName = getVersionName(requirement.getMinimumProtocolVersion());
+                } else {
+                    // Player is outside target version range
+                    versionName = getVersionName(requirement.getTargetProtocolVersion());
+                }
+                
+                String rawMessage = plugin.getDenyMessage().replace("{needed_version}", versionName);
                 Component denyMessage = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMessage);
                 
                 player.sendMessage(plugin.getPrefix().append(denyMessage));

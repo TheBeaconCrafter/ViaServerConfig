@@ -165,6 +165,7 @@ public class ViaServerConfig {
                 String serverName = registeredServer.getServerInfo().getName();
                 if (config.node("servers", serverName).virtual()) {
                     config.node("servers", serverName, "target-protocol-version").set(0);
+                    config.node("servers", serverName, "minimum-protocol-version").set(0);
                     config.node("servers", serverName, "allow-over").set(true);
                     config.node("servers", serverName, "allow-under").set(true);
                     changed = true;
@@ -218,12 +219,22 @@ public class ViaServerConfig {
                     }
                     requirements.put(serverName, new ServerRequirement(protocolVersion, true, false));
                 } else {
-                    // New format with comprehensive options
+                    // New format with more options
                     int targetVersion = serverNode.node("target-protocol-version").getInt(0);
                     boolean allowOver = serverNode.node("allow-over").getBoolean(true);
                     boolean allowUnder = serverNode.node("allow-under").getBoolean(true);
                     
-                    requirements.put(serverName, new ServerRequirement(targetVersion, allowOver, allowUnder));
+                    ServerRequirement requirement = new ServerRequirement(targetVersion, allowOver, allowUnder);
+                    
+                    // min version
+                    if (!serverNode.node("minimum-protocol-version").virtual()) {
+                        int minVersion = serverNode.node("minimum-protocol-version").getInt(0);
+                        if (minVersion > 0) {
+                            requirement.setMinimumProtocolVersion(minVersion);
+                        }
+                    }
+                    
+                    requirements.put(serverName, requirement);
                 }
             }
         } catch (Exception e) {
@@ -295,11 +306,13 @@ public class ViaServerConfig {
         private final int targetProtocolVersion;
         private final boolean allowOver;
         private final boolean allowUnder;
+        private int minimumProtocolVersion;
         
         public ServerRequirement(int targetProtocolVersion, boolean allowOver, boolean allowUnder) {
             this.targetProtocolVersion = targetProtocolVersion;
             this.allowOver = allowOver;
             this.allowUnder = allowUnder;
+            this.minimumProtocolVersion = 0;
         }
         
         public int getTargetProtocolVersion() {
@@ -314,15 +327,29 @@ public class ViaServerConfig {
             return allowUnder;
         }
         
+        public int getMinimumProtocolVersion() {
+            return minimumProtocolVersion;
+        }
+        
+        public void setMinimumProtocolVersion(int minimumProtocolVersion) {
+            this.minimumProtocolVersion = minimumProtocolVersion;
+        }
+        
         /**
          * Check if a player with the given version can connect
          */
         public boolean canConnect(int playerVersion) {
-            // If no requirement (target is 0), always allow
+            // If no requirement, always allow
             if (targetProtocolVersion <= 0) {
                 return true;
             }
             
+            // Check minimum version first (if set)
+            if (minimumProtocolVersion > 0 && playerVersion < minimumProtocolVersion) {
+                return false;
+            }
+            
+            // Check target version
             if (playerVersion > targetProtocolVersion) {
                 return allowOver;
             } else if (playerVersion < targetProtocolVersion) {

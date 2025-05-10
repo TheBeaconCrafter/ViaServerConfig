@@ -163,7 +163,7 @@ public class VSCCommand implements SimpleCommand {
                 suggestions.add("bypass");
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("bypass") && 
-                invocation.source().hasPermission("beaconlabs.viasc.bypass.others")) {            // Suggest online players for bypass command
+                invocation.source().hasPermission("beaconlabs.viasc.bypass.others")) {
             server.getAllPlayers().forEach(player -> suggestions.add(player.getUsername()));
         }
         
